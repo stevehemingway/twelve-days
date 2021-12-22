@@ -2,14 +2,30 @@ import string as stringlib
 import time
 # import pygame
 from num2words import num2words
-
+import os
+from tempfile import TemporaryFile
 from gtts import gTTS
+import io
+from IPython.display import Audio
+import pyglet
+
+# pyglet.options["audio"] = ("DirectSound",)
+pyglet.options['search_local_libs'] = True
+
+# options are DirectSound and OpenAL -- go for default, whatever that is.
 
 # from io import BytesIO
 
 # mp3_fp = BytesIO()
 
-mp3_fp = open("twelve.mp3", "wb")
+# mp3_filename = "twelve.mp3"
+# 
+# try: 
+#     mp3_fp = open(mp3_filename, "wb")
+# except:
+#     os.remove(mp3_filename)
+#     mp3_fp = open(mp3_filename, "wb")
+    
 
 presents = [
     "partridge in a pear tree.",
@@ -23,36 +39,62 @@ presents = [
     "ladies dancing",
     "lords a-leaping",
     "pipers piping",
-        "drummers drumming"]
+    "drummers drumming"]
 
-def outputstr(string, end='\n'):
+def ispeak(my_text):
+    with io.BytesIO() as f:
+        gTTS(text=my_text, lang='en').write_to_fp(f)
+        f.seek(0)
+        return Audio(f.read(), autoplay=True, rate=1)
+        
+def speak(words: str, lang: str="en"):
+    with io.BytesIO() as f:
+        gTTS(text=words, lang=lang).write_to_fp(f)
+        f.seek(0)
+        
+        player = pyglet.media.load('_.mp3', file=f).play()
+        while player.playing:
+            pyglet.app.platform_event_loop.dispatch_posted_events()
+            pyglet.clock.tick()
+            
+first_line = "On the {} day of Christmas my true love gave to me"
+
+def old_outputstr(string, end='\n'):
     print(string, end = end)
     if string in stringlib.punctuation or string in stringlib.whitespace:
         return
     tts = gTTS(string, lang='en')
     tts.write_to_fp(mp3_fp)
 
+def outputstr(string):
+    print(string)
+    speak(string)
+    
 def ordinal(i):
     return num2words(i, to='ordinal')
 
 def cardinal(i):
     return num2words(i)
 
-for i in range(1,13):
-    outputstr("On the {} day of Christmas my true love gave to me".format(ordinal(i)))
-    for j in range(i, 1, -1 ):
-        outputstr("{} {}".format(cardinal(j).capitalize(), presents[j-1]), end = '')
-        if j > 2:
-            outputstr(",")
-        else:
-            outputstr(" and")
-    outputstr("A {}".format(presents[0]))
-        
-    outputstr("")
+def sing_song(days):
+    for i in range(1, days+1):
+        outputstr(first_line.format(ordinal(i)))
+        for j in range(i, 1, -1 ):
+            this_line = "{} {}".format(cardinal(j).capitalize(), presents[j-1])
+            if j > 2:
+                this_line += ", "
+            else:
+                this_line += " and"
+            outputstr(this_line)
+        outputstr("A {}".format(presents[0]))
+            
+        outputstr("Next verse.")
     
 # mp3_fp.seek(0)
 # pygame.mixer.init()
 # pygame.mixer.music.load(mp3_fp)
 # pygame.mixer.music.play()
 
-mp3_fp.close()
+# mp3_fp.close()
+
+sing_song(2)
